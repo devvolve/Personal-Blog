@@ -206,6 +206,20 @@ figure.portrait { margin: 0; }
 .next-page .title { font-family: var(--serif); font-size: 22px; font-weight: 500; }
 .next-page button:hover .title { color: var(--navy); }
 
+/* ===== News page ===== */
+.news-list { margin-top: 8px; }
+.news-status { color: var(--muted); font-size: 15px; }
+.news-item {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 20px;
+  padding: 20px 0; border-bottom: 1px solid var(--border);
+}
+.news-item a.news-title {
+  font-family: var(--serif); font-size: 19px; font-weight: 500;
+  text-decoration: none; color: var(--ink); max-width: 50ch;
+}
+.news-item a.news-title:hover { color: var(--navy); }
+.news-meta { font-size: 13px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+
 footer.site-footer { padding: 30px 0 60px; font-size: 13px; color: var(--muted); }
 
 .route[hidden] { display: none; }
@@ -220,6 +234,7 @@ footer.site-footer { padding: 30px 0 60px; font-size: 13px; color: var(--muted);
       <button data-route="about" type="button">About</button>
       <button data-route="portfolio" type="button">Portfolio</button>
       <button data-route="writing" type="button">Writing</button>
+      <button data-route="news" type="button">News</button>
       <button data-route="contact" type="button">Contact</button>
     </nav>
     <button class="theme-toggle" id="themeToggle" type="button">Dark mode</button>
@@ -248,8 +263,13 @@ footer.site-footer { padding: 30px 0 60px; font-size: 13px; color: var(--muted);
         <span class="toc-title">Writing</span>
         <span class="toc-desc">Notes on what I'm learning</span>
       </button>
-      <button class="toc-row" data-route="contact" type="button">
+      <button class="toc-row" data-route="news" type="button">
         <span class="toc-num">04</span>
+        <span class="toc-title">News</span>
+        <span class="toc-desc">Live tech headlines</span>
+      </button>
+      <button class="toc-row" data-route="contact" type="button">
+        <span class="toc-num">05</span>
         <span class="toc-title">Contact</span>
         <span class="toc-desc">Email, GitHub, LinkedIn</span>
       </button>
@@ -356,9 +376,26 @@ footer.site-footer { padding: 30px 0 60px; font-size: 13px; color: var(--muted);
       </article>
     </div>
     <div class="next-page">
+      <button data-route="news" type="button">
+        <span><span class="label">Next</span><br><span class="title">News</span></span>
+        <span aria-hidden="true">04</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="route wrap page" id="page-news" data-title="News — Daniyal Dianati" hidden>
+    <p class="kicker">News</p>
+    <h1 class="headline">What's happening in tech</h1>
+    <p class="deck">Live headlines, pulled straight from Hacker News.</p>
+
+    <div class="news-list" id="newsList">
+      <p class="news-status">Loading headlines…</p>
+    </div>
+
+    <div class="next-page">
       <button data-route="contact" type="button">
         <span><span class="label">Next</span><br><span class="title">Contact</span></span>
-        <span aria-hidden="true">04</span>
+        <span aria-hidden="true">05</span>
       </button>
     </div>
   </section>
@@ -420,7 +457,7 @@ footer.site-footer { padding: 30px 0 60px; font-size: 13px; color: var(--muted);
   });
 
   /* ---------- Client-side routing (keeps this a single file, but each nav item still shows a distinct page) ---------- */
-  var routes = ["home", "about", "portfolio", "writing", "contact"];
+  var routes = ["home", "about", "portfolio", "writing", "news", "contact"];
   var navButtons = document.querySelectorAll("[data-route]");
 
   function showRoute(name, pushHistory) {
@@ -435,7 +472,6 @@ footer.site-footer { padding: 30px 0 60px; font-size: 13px; color: var(--muted);
         section.hidden = true;
       }
     });
-    document.querySelectorAll(".site-nav button, .theme-toggle").forEach(function () {});
     document.querySelectorAll(".site-nav button").forEach(function (btn) {
       if (btn.getAttribute("data-route") === name) {
         btn.setAttribute("aria-current", "page");
@@ -448,6 +484,7 @@ footer.site-footer { padding: 30px 0 60px; font-size: 13px; color: var(--muted);
       if (window.location.hash !== hash) window.history.pushState(null, "", hash);
     }
     window.scrollTo(0, 0);
+    if (name === "news") loadNews();
   }
 
   navButtons.forEach(function (btn) {
@@ -463,6 +500,65 @@ footer.site-footer { padding: 30px 0 60px; font-size: 13px; color: var(--muted);
 
   var initial = window.location.hash.replace("#", "") || "home";
   showRoute(initial, false);
+
+  /* ---------- News page: live headlines from Hacker News' public API ---------- */
+  var newsLoaded = false;
+  function loadNews() {
+    if (newsLoaded) return;
+    newsLoaded = true;
+    var listEl = document.getElementById("newsList");
+    if (!listEl) return;
+
+    fetch("https://hacker-news.firebaseio.com/v0/topstories.json")
+      .then(function (res) {
+        if (!res.ok) throw new Error("bad response");
+        return res.json();
+      })
+      .then(function (ids) {
+        var topIds = ids.slice(0, 8);
+        return Promise.all(topIds.map(function (id) {
+          return fetch("https://hacker-news.firebaseio.com/v0/item/" + id + ".json")
+            .then(function (r) { return r.json(); })
+            .catch(function () { return null; });
+        }));
+      })
+      .then(function (items) {
+        var valid = items.filter(function (item) {
+          return item && item.title && item.url;
+        }).slice(0, 6);
+
+        if (valid.length === 0) {
+          listEl.innerHTML = '<p class="news-status">No headlines available right now.</p>';
+          return;
+        }
+
+        listEl.innerHTML = "";
+        valid.forEach(function (item) {
+          var row = document.createElement("div");
+          row.className = "news-item";
+          var domain = "";
+          try { domain = new URL(item.url).hostname.replace("www.", ""); } catch (e) { domain = ""; }
+          row.innerHTML =
+            '<a class="news-title" href="' + item.url + '" target="_blank" rel="noopener">' +
+              escapeHtml(item.title) +
+            "</a>" +
+            '<span class="news-meta">' + escapeHtml(domain) + " · " + (item.score || 0) + " pts</span>";
+          listEl.appendChild(row);
+        });
+      })
+      .catch(function () {
+        listEl.innerHTML = '<p class="news-status">Couldn\'t load headlines right now — check your connection and reload.</p>';
+        newsLoaded = false;
+      });
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  if (window.location.hash.replace("#", "") === "news") loadNews();
 
   /* ---------- Writing page: expandable article excerpts ---------- */
   document.querySelectorAll(".article-item").forEach(function (item) {
