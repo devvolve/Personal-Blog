@@ -186,6 +186,8 @@ figure.portrait { margin: 0; }
 }
 .contact-row .label { color: var(--muted); font-size: 14px; }
 .contact-row .value { font-family: var(--serif); font-size: 19px; }
+.contact-row a.value { text-decoration: none; }
+.contact-row a.value:hover { color: var(--navy); }
 
 .copy-btn {
   margin-top: 28px; font-size: 14px; background: none; color: var(--ink);
@@ -368,7 +370,7 @@ footer.site-footer { padding: 30px 0 60px; font-size: 13px; color: var(--muted);
     <div class="contact-list">
       <div class="contact-row"><span class="label">Email</span><span class="value">daniyal.dianati@gmail.com</span></div>
       <div class="contact-row"><span class="label">GitHub</span><span class="value">github.com/devvolve</span></div>
-      <div class="contact-row"><span class="label">LinkedIn</span><span class="value">linkedin.com/in/daniyal</span></div>
+      <div class="contact-row"><span class="label">LinkedIn</span><a class="value" href="https://www.linkedin.com/in/daniel-dianati/">linkedin.com/in/daniel-dianati</a></div>
     </div>
     <button class="copy-btn" id="copyEmail" type="button" data-email="daniyal.dianati@gmail.com">Copy email address</button>
   </section>
